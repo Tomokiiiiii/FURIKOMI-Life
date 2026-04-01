@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>振込額計算</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0d1117;
+  --bg2:    #161b22;
+  --bg3:    #1c2330;
+  --bd:     #2a3244;
+  --bd2:    #3a4a66;
+  --tx:     #e6edf3;
+  --tx2:    #8b9ab0;
+  --tx3:    #4d6075;
+  --ac:     #e8a020;
+  --ac-dim: rgba(232,160,32,.13);
+  --green:  #3fb950;
+  --gd:     rgba(63,185,80,.13);
+  --blue:   #58a6ff;
+  --bd-b:   rgba(88,166,255,.13);
+  --red:    #f85149;
+  --rd:     rgba(248,81,73,.12);
+  --r: 10px; --rs: 6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--tx);
+  display:flex;flex-direction:column;font-size:14px;max-width:480px;margin:0 auto;
+  box-shadow:0 0 40px rgba(0,0,0,.5)}
+
+/* ── Header ── */
+.hd{background:var(--bg2);border-bottom:1px solid var(--bd);
+  padding:14px 16px 0;flex-shrink:0}
+.hd-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.logo{width:30px;height:30px;background:var(--ac);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.hd-title{font-size:15px;font-weight:700}
+.hd-sub{font-size:11px;color:var(--tx2);font-weight:300}
+.tabs{display:flex}
+.tab{flex:1;padding:8px 4px 10px;text-align:center;font-size:11px;color:var(--tx2);
+  cursor:pointer;border-bottom:2px solid transparent;transition:.15s;font-weight:500;
+  user-select:none;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab-ic{font-size:18px;line-height:1}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* ── Pages ── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:16px;display:none;
+  -webkit-overflow-scrolling:touch}
+.page.on{display:block}
+
+/* ── Util ── */
+.sec{margin-bottom:20px}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--tx2);text-transform:uppercase}
+.divider{border:none;border-top:1px solid var(--bd);margin:14px 0}
+
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:8px}
+.card-row{display:flex;align-items:center;gap:10px}
+.ic{width:36px;height:36px;border-radius:var(--rs);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ic-b{background:rgba(88,166,255,.15)}
+.ic-a{background:rgba(232,160,32,.15)}
+.ci{flex:1;min-width:0}
+.ci-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-sub{font-size:11px;color:var(--tx2);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 16px;border-radius:var(--rs);border:none;font-size:13px;font-weight:600;
+  cursor:pointer;transition:.15s;font-family:'Noto Sans JP',sans-serif;white-space:nowrap}
+.btn-p{background:var(--ac);color:#000}
+.btn-p:active{filter:brightness(.88)}
+.btn-g{background:var(--bg3);color:var(--tx);border:1px solid var(--bd)}
+.btn-g:active{background:var(--bd)}
+.btn-d{background:var(--rd);color:var(--red);border:1px solid transparent}
+.bic{width:32px;height:32px;padding:0;background:var(--bg3);border:1px solid var(--bd);
+  color:var(--tx2);border-radius:var(--rs);font-size:15px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.bic:active{background:var(--bd)}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  padding:10px;background:transparent;border:1px dashed var(--bd2);border-radius:var(--rs);
+  color:var(--tx2);font-size:13px;cursor:pointer;transition:.15s;
+  font-family:'Noto Sans JP',sans-serif}
+.add-btn:active{background:var(--bg3)}
+
+/* ── Form ── */
+.fc{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);
+  padding:14px;margin-bottom:10px}
+.fl{display:block;font-size:11px;color:var(--tx2);margin-bottom:5px;font-weight:500}
+.fi,.fs{width:100%;background:var(--bg2);border:1px solid var(--bd);
+  border-radius:var(--rs);padding:10px 12px;color:var(--tx);font-size:14px;
+  font-family:'Noto Sans JP',sans-serif;outline:none;transition:border-color .15s;
+  -webkit-appearance:none}
+.fi:focus,.fs:focus{border-color:var(--ac)}
+.fi::placeholder{color:var(--tx3)}
+.fs option{background:var(--bg2)}
+.fs-w{position:relative}
+.fs-w::after{content:'▾';position:absolute;right:12px;top:50%;
+  transform:translateY(-50%);color:var(--tx2);pointer-events:none;font-size:12px}
+.fr{margin-bottom:10px}
+.fr:last-child{margin-bottom:0}
+.fa{display:flex;gap:8px;margin-top:12px}
+.fa .btn{flex:1}
+
+/* ── Chips ── */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:.04em}
+.ch-fix{background:var(--bd-b);color:var(--blue)}
+.ch-var{background:var(--gd);color:var(--green)}
+
+/* ── Month Nav ── */
+.mn{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.mn-btn{width:36px;height:36px;border-radius:var(--rs);border:1px solid var(--bd);
+  background:var(--bg3);color:var(--tx);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mn-btn:active{background:var(--bd)}
+.mn-label{flex:1;text-align:center;font-size:16px;font-weight:700}
+
+/* ── Input Items ── */
+.ii{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.ii-info{flex:1;min-width:0}
+.ii-name{font-size:13px;font-weight:500;margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ii-acc{font-size:11px;color:var(--tx2)}
+.ii-field{display:flex;align-items:center;background:var(--bg3);
+  border:1px solid var(--bd);border-radius:var(--rs);padding:0 10px;flex-shrink:0;gap:4px}
+.ii-field:focus-within{border-color:var(--ac)}
+.ii-yen{color:var(--tx2);font-size:13px}
+.ii-inp{background:none;border:none;color:var(--tx);
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;
+  width:88px;text-align:right;padding:10px 0;outline:none}
+.ii-inp::placeholder{color:var(--tx3);font-size:13px}
+.ii-fixed{display:flex;align-items:center;background:var(--bg3);
+  border:1px solid var(--bd);border-radius:var(--rs);padding:0 10px;
+  flex-shrink:0;gap:4px;opacity:.6}
+.ii-fixed-amt{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;
+  padding:10px 0;color:var(--tx);width:88px;text-align:right}
+
+/* ── Result ── */
+.rh{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);
+  padding:16px;margin-bottom:16px;text-align:center}
+.rh-date{font-size:12px;color:var(--tx2);margin-bottom:4px}
+.rh-total-lbl{font-size:11px;color:var(--tx2);margin:12px 0 4px;font-weight:500}
+.rh-total{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:var(--ac)}
+.rh-yen{font-size:20px;margin-right:2px}
+.rh-note{font-size:11px;color:var(--tx3);margin-top:6px}
+
+.tc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);
+  margin-bottom:10px;overflow:hidden}
+.tc-hd{display:flex;align-items:center;gap:12px;padding:13px 14px 10px;
+  border-bottom:1px solid var(--bd)}
+.tc-name{font-size:14px;font-weight:700;flex:1}
+.tc-amt{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--ac)}
+.tc-body{padding:10px 14px}
+.ti{display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--bd);gap:8px}
+.ti:last-child{border-bottom:none}
+.ti-name{font-size:13px;color:var(--tx2);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti-amt{font-family:'JetBrains Mono',monospace;font-size:13px;flex-shrink:0}
+.ti-total{color:var(--ac)}
+.tc-foot{padding:8px 14px;background:var(--ac-dim);
+  display:flex;justify-content:space-between;align-items:center}
+.tc-foot-lbl{font-size:11px;color:var(--ac);font-weight:700}
+.tc-foot-amt{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ac)}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:50px 20px;color:var(--tx2)}
+.empty-ic{font-size:40px;margin-bottom:14px}
+.empty-t{font-size:13px;line-height:1.7}
+.empty-t b{color:var(--ac)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--bg3);border:1px solid var(--bd2);color:var(--tx);
+  padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;
+  transition:transform .28s ease;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.5);
+  pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Alert / empty result ── */
+.alert{background:var(--ac-dim);border:1px solid rgba(232,160,32,.3);
+  border-radius:var(--r);padding:14px;font-size:13px;color:var(--ac);
+  line-height:1.6;text-align:center}
+
+/* emoji picker row */
+.emoji-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.ep{width:40px;height:40px;border-radius:var(--rs);background:var(--bg2);
+  border:2px solid var(--bd);font-size:22px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:.15s}
+.ep.sel{border-color:var(--ac)}
+.ep:active{transform:scale(.92)}
+
+/* toggle row */
+.type-row{display:flex;gap:0;border-radius:var(--rs);overflow:hidden;
+  border:1px solid var(--bd)}
+.type-btn{flex:1;padding:9px;text-align:center;font-size:12px;font-weight:600;
+  cursor:pointer;background:var(--bg2);color:var(--tx2);transition:.15s;user-select:none}
+.type-btn.sel{background:var(--ac);color:#000}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-top">
+    <div class="logo">💴</div>
+    <div>
+      <div class="hd-title">振込額計算</div>
+      <div class="hd-sub">口座間の振込額を自動で算出</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab on" data-tab="result" onclick="switchTab('result')">
+      <span class="tab-ic">📊</span>今月の振込
+    </div>
+    <div class="tab" data-tab="input" onclick="switchTab('input')">
+      <span class="tab-ic">✏️</span>金額入力
+    </div>
+    <div class="tab" data-tab="settings" onclick="switchTab('settings')">
+      <span class="tab-ic">⚙️</span>設定
+    </div>
+  </div>
+</div>
+
+<div class="pages">
+
+  <!-- 結果ページ -->
+  <div class="page on" id="page-result"></div>
+
+  <!-- 入力ページ -->
+  <div class="page" id="page-input">
+    <div class="mn">
+      <button class="mn-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="mn-label" id="month-label"></div>
+      <button class="mn-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div id="input-list"></div>
+  </div>
+
+  <!-- 設定ページ -->
+  <div class="page" id="page-settings">
+
+    <div class="sec">
+      <div class="sec-hd">
+        <span class="sec-title">🏦 口座</span>
+      </div>
+      <div id="acc-list"></div>
+      <button class="add-btn" onclick="openAccForm()">＋ 口座を追加</button>
+      <div id="acc-form" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sec">
+      <div class="sec-hd">
+        <span class="sec-title">💳 支払い項目</span>
+      </div>
+      <div id="item-list"></div>
+      <button class="add-btn" onclick="openItemForm()">＋ 支払い項目を追加</button>
+      <div id="item-form" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div style="height:30px"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──
+let state = {
+  accounts: [],   // [{id, name, emoji}]
+  items: [],      // [{id, name, accountId, type:'fixed'|'variable', fixedAmount:0}]
+  months: {}      // {"2025-04": {itemId: amount}}
+};
+
+let currentMonth = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+})();
+
+// ── Persist ──
+function save() { localStorage.setItem('fk2', JSON.stringify(state)); }
+function load() {
+  try { const d = localStorage.getItem('fk2'); if(d) state = JSON.parse(d); } catch(e){}
+}
+
+// ── Helpers ──
+function uid() { return Math.random().toString(36).slice(2,9); }
+function fmt(n) { return Number(n||0).toLocaleString('ja-JP'); }
+function parseNum(s) { return parseInt(String(s).replace(/[^0-9]/g,''))||0; }
+function monthLabel(m) {
+  const [y,mo] = m.split('-');
+  return `${y}年${parseInt(mo)}月`;
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2000);
+}
+function accName(id) {
+  const a = state.accounts.find(a=>a.id===id);
+  return a ? `${a.emoji} ${a.name}` : '—';
+}
+
+// ── Tab ──
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('on', el.dataset.tab===t));
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('on'));
+  document.getElementById('page-'+t).classList.add('on');
+  if(t==='result') renderResult();
+  if(t==='input') renderInput();
+  if(t==='settings') renderSettings();
+}
+
+// ── Month ──
+function changeMonth(d) {
+  const [y,m] = currentMonth.split('-').map(Number);
+  const nd = new Date(y, m-1+d, 1);
+  currentMonth = `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;
+  renderInput();
+}
+
+// ── Result ──
+function renderResult() {
+  const el = document.getElementById('page-result');
+  const md = state.months[currentMonth] || {};
+
+  if(!state.accounts.length || !state.items.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-ic">⚙️</div>
+      <div class="empty-t">まず<b>設定タブ</b>で<br>口座と支払い項目を登録してください</div>
+    </div>`;
+    return;
+  }
+
+  // group by account
+  const byAcc = {};
+  state.accounts.forEach(a=>{ byAcc[a.id]={acc:a, items:[], total:0}; });
+
+  let grandTotal = 0;
+  state.items.forEach(item=>{
+    if(!byAcc[item.accountId]) return;
+    const amt = item.type==='fixed' ? (item.fixedAmount||0) : parseNum(md[item.id]);
+    byAcc[item.accountId].items.push({name:item.name, type:item.type, amt});
+    byAcc[item.accountId].total += amt;
+    grandTotal += amt;
+  });
+
+  // check any variable items missing
+  const missing = state.items.filter(it=>it.type==='variable' && !md[it.id]);
+
+  let html = `<div class="rh">
+    <div class="rh-date">${monthLabel(currentMonth)}</div>
+    <div class="rh-total-lbl">合計振込額</div>
+    <div class="rh-total"><span class="rh-yen">¥</span>${fmt(grandTotal)}</div>
+    ${missing.length ? `<div class="rh-note">⚠️ 未入力の変動項目があります</div>` : ''}
+  </div>`;
+
+  state.accounts.forEach(acc=>{
+    const g = byAcc[acc.id];
+    if(!g || !g.items.length) return;
+    html += `<div class="tc">
+      <div class="tc-hd">
+        <div class="ic ic-b">${acc.emoji}</div>
+        <div class="tc-name">${acc.name}</div>
+        <div class="tc-amt">¥${fmt(g.total)}</div>
+      </div>
+      <div class="tc-body">`;
+    g.items.forEach(it=>{
+      html += `<div class="ti">
+        <span class="ti-name">${it.name}</span>
+        <span class="chip ${it.type==='fixed'?'ch-fix':'ch-var'}">${it.type==='fixed'?'固定':'変動'}</span>
+        <span class="ti-amt">¥${fmt(it.amt)}</span>
+      </div>`;
+    });
+    html += `</div>
+      <div class="tc-foot">
+        <span class="tc-foot-lbl">🏦 ${acc.name} へ振込</span>
+        <span class="tc-foot-amt">¥${fmt(g.total)}</span>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+// ── Input ──
+function renderInput() {
+  document.getElementById('month-label').textContent = monthLabel(currentMonth);
+  const el = document.getElementById('input-list');
+  const md = state.months[currentMonth] || {};
+
+  if(!state.items.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-ic">📋</div>
+      <div class="empty-t">設定タブで支払い項目を<br>追加してください</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  // group by account
+  state.accounts.forEach(acc=>{
+    const its = state.items.filter(it=>it.accountId===acc.id);
+    if(!its.length) return;
+    html += `<div class="sec-title" style="margin-bottom:8px;padding-left:2px">${acc.emoji} ${acc.name}</div>`;
+    its.forEach(item=>{
+      if(item.type==='fixed') {
+        html += `<div class="ii">
+          <div class="ii-info">
+            <div class="ii-name">${item.name}</div>
+            <div class="ii-acc"><span class="chip ch-fix">固定</span></div>
+          </div>
+          <div class="ii-fixed">
+            <span class="ii-yen">¥</span>
+            <div class="ii-fixed-amt">${fmt(item.fixedAmount)}</div>
+          </div>
+        </div>`;
+      } else {
+        const v = md[item.id] || '';
+        html += `<div class="ii">
+          <div class="ii-info">
+            <div class="ii-name">${item.name}</div>
+            <div class="ii-acc"><span class="chip ch-var">変動</span></div>
+          </div>
+          <div class="ii-field">
+            <span class="ii-yen">¥</span>
+            <input class="ii-inp" type="number" inputmode="numeric" pattern="[0-9]*"
+              placeholder="金額" value="${v}"
+              onchange="saveItemAmount('${item.id}', this.value)"
+              oninput="saveItemAmount('${item.id}', this.value)">
+          </div>
+        </div>`;
+      }
+    });
+    html += `<div style="height:6px"></div>`;
+  });
+
+  html += `<div style="text-align:center;margin-top:8px">
+    <button class="btn btn-p" onclick="switchTab('result')">📊 振込額を確認</button>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function saveItemAmount(id, v) {
+  if(!state.months[currentMonth]) state.months[currentMonth] = {};
+  state.months[currentMonth][id] = parseNum(v);
+  save();
+}
+
+// ── Settings ──
+function renderSettings() {
+  renderAccList();
+  renderItemList();
+}
+
+const EMOJIS_ACC = ['🏦','🏧','💳','💰','🪙','🏪','🎌','🏢'];
+const EMOJIS_ITEM = ['💳','🚗','🏠','📱','💊','🎓','⚡','🌐','🛒','✈️','🎵','🍱'];
+
+let editingAccId = null;
+let editingItemId = null;
+let selectedAccEmoji = '🏦';
+let selectedItemEmoji = '💳';
+
+function renderAccList() {
+  const el = document.getElementById('acc-list');
+  if(!state.accounts.length) {
+    el.innerHTML = `<div style="color:var(--tx3);font-size:12px;padding:8px 0 12px">まだ口座が登録されていません</div>`;
+    return;
+  }
+  el.innerHTML = state.accounts.map(a=>`
+    <div class="card">
+      <div class="card-row">
+        <div class="ic ic-b">${a.emoji}</div>
+        <div class="ci"><div class="ci-name">${a.name}</div></div>
+        <button class="bic" onclick="openAccForm('${a.id}')">✏️</button>
+        <button class="bic btn-d" onclick="deleteAcc('${a.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderItemList() {
+  const el = document.getElementById('item-list');
+  if(!state.items.length) {
+    el.innerHTML = `<div style="color:var(--tx3);font-size:12px;padding:8px 0 12px">まだ支払い項目が登録されていません</div>`;
+    return;
+  }
+  el.innerHTML = state.items.map(it=>{
+    const acc = state.accounts.find(a=>a.id===it.accountId);
+    const sub = it.type==='fixed' ? `¥${fmt(it.fixedAmount)}（固定）` : '毎月変動';
+    return `<div class="card">
+      <div class="card-row">
+        <div class="ic ic-a">${it.emoji||'💳'}</div>
+        <div class="ci">
+          <div class="ci-name">${it.name}</div>
+          <div class="ci-sub">${acc?`${acc.emoji} ${acc.name}`:'—'} ／ ${sub}</div>
+        </div>
+        <button class="bic" onclick="openItemForm('${it.id}')">✏️</button>
+        <button class="bic btn-d" onclick="deleteItem('${it.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAccForm(id=null) {
+  editingAccId = id;
+  const acc = id ? state.accounts.find(a=>a.id===id) : null;
+  selectedAccEmoji = acc ? acc.emoji : '🏦';
+  const fd = document.getElementById('acc-form');
+  document.getElementById('acc-list').style.display = 'none';
+  document.querySelector('.sec:first-child .add-btn').style.display = 'none';
+  fd.style.display = 'block';
+  fd.innerHTML = `<div class="fc">
+    <div class="fr">
+      <label class="fl">アイコン</label>
+      <div class="emoji-row" id="acc-emojis">
+        ${EMOJIS_ACC.map(e=>`<div class="ep${e===selectedAccEmoji?' sel':''}" onclick="pickAccEmoji('${e}')">${e}</div>`).join('')}
+      </div>
+    </div>
+    <div class="fr">
+      <label class="fl">口座名</label>
+      <input class="fi" id="acc-name" type="text" placeholder="例：楽天銀行" value="${acc?acc.name:''}">
+    </div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeAccForm()">キャンセル</button>
+      <button class="btn btn-p" onclick="saveAcc()">${acc?'更新':'追加'}</button>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('acc-name').focus(),100);
+}
+
+function pickAccEmoji(e) {
+  selectedAccEmoji = e;
+  document.querySelectorAll('#acc-emojis .ep').forEach(el=>el.classList.toggle('sel', el.textContent===e));
+}
+
+function closeAccForm() {
+  document.getElementById('acc-form').style.display = 'none';
+  document.getElementById('acc-list').style.display = 'block';
+  document.querySelector('.sec:first-child .add-btn').style.display = 'flex';
+  renderAccList();
+}
+
+function saveAcc() {
+  const name = document.getElementById('acc-name').value.trim();
+  if(!name) { toast('口座名を入力してください'); return; }
+  if(editingAccId) {
+    const a = state.accounts.find(a=>a.id===editingAccId);
+    a.name = name; a.emoji = selectedAccEmoji;
+  } else {
+    state.accounts.push({id:uid(), name, emoji:selectedAccEmoji});
+  }
+  save(); closeAccForm();
+  toast(editingAccId ? '更新しました' : '口座を追加しました');
+  editingAccId = null;
+}
+
+function deleteAcc(id) {
+  if(!confirm('この口座を削除しますか？\n（紐づく支払い項目も削除されます）')) return;
+  state.accounts = state.accounts.filter(a=>a.id!==id);
+  state.items = state.items.filter(it=>it.accountId!==id);
+  save(); renderAccList(); renderItemList();
+  toast('削除しました');
+}
+
+function openItemForm(id=null) {
+  editingItemId = id;
+  const it = id ? state.items.find(i=>i.id===id) : null;
+  selectedItemEmoji = it ? (it.emoji||'💳') : '💳';
+  const fd = document.getElementById('item-form');
+  document.getElementById('item-list').style.display = 'none';
+  document.querySelectorAll('.sec')[1].querySelector('.add-btn').style.display = 'none';
+  fd.style.display = 'block';
+
+  const accOpts = state.accounts.map(a=>`<option value="${a.id}" ${it&&it.accountId===a.id?'selected':''}>${a.emoji} ${a.name}</option>`).join('');
+  const isFixed = it ? it.type==='fixed' : false;
+
+  fd.innerHTML = `<div class="fc">
+    <div class="fr">
+      <label class="fl">アイコン</label>
+      <div class="emoji-row" id="item-emojis">
+        ${EMOJIS_ITEM.map(e=>`<div class="ep${e===selectedItemEmoji?' sel':''}" onclick="pickItemEmoji('${e}')">${e}</div>`).join('')}
+      </div>
+    </div>
+    <div class="fr">
+      <label class="fl">項目名</label>
+      <input class="fi" id="it-name" type="text" placeholder="例：楽天カード" value="${it?it.name:''}">
+    </div>
+    <div class="fr">
+      <label class="fl">引落口座</label>
+      <div class="fs-w"><select class="fs" id="it-acc">${accOpts||'<option value="">先に口座を追加してください</option>'}</select></div>
+    </div>
+    <div class="fr">
+      <label class="fl">金額タイプ</label>
+      <div class="type-row" id="type-row">
+        <div class="type-btn${!isFixed?' sel':''}" onclick="setType('variable')">変動（毎月入力）</div>
+        <div class="type-btn${isFixed?' sel':''}" onclick="setType('fixed')">固定金額</div>
+      </div>
+    </div>
+    <div id="fixed-area" style="${isFixed?'':'display:none'}">
+      <div class="fr">
+        <label class="fl">固定金額（円）</label>
+        <input class="fi" id="it-fixed" type="number" inputmode="numeric" placeholder="0" value="${it&&it.type==='fixed'?it.fixedAmount:''}">
+      </div>
+    </div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeItemForm()">キャンセル</button>
+      <button class="btn btn-p" onclick="saveItem()">${it?'更新':'追加'}</button>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('it-name').focus(),100);
+}
+
+function setType(t) {
+  document.querySelectorAll('.type-btn').forEach(el=>el.classList.toggle('sel', el.textContent.includes(t==='fixed'?'固定':'変動')));
+  document.getElementById('fixed-area').style.display = t==='fixed' ? '' : 'none';
+}
+function pickItemEmoji(e) {
+  selectedItemEmoji = e;
+  document.querySelectorAll('#item-emojis .ep').forEach(el=>el.classList.toggle('sel', el.textContent===e));
+}
+function closeItemForm() {
+  document.getElementById('item-form').style.display = 'none';
+  document.getElementById('item-list').style.display = 'block';
+  document.querySelectorAll('.sec')[1].querySelector('.add-btn').style.display = 'flex';
+  renderItemList();
+}
+function saveItem() {
+  const name = document.getElementById('it-name').value.trim();
+  const accId = document.getElementById('it-acc').value;
+  const isFixed = document.querySelector('.type-btn.sel').textContent.includes('固定');
+  const fixedAmount = parseNum(document.getElementById('it-fixed')?.value||'0');
+  if(!name) { toast('項目名を入力してください'); return; }
+  if(!accId) { toast('口座を選択してください'); return; }
+  if(editingItemId) {
+    const it = state.items.find(i=>i.id===editingItemId);
+    Object.assign(it, {name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji});
+  } else {
+    state.items.push({id:uid(), name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji});
+  }
+  save(); closeItemForm();
+  toast(editingItemId ? '更新しました' : '項目を追加しました');
+  editingItemId = null;
+}
+function deleteItem(id) {
+  if(!confirm('この支払い項目を削除しますか？')) return;
+  state.items = state.items.filter(i=>i.id!==id);
+  save(); renderItemList();
+  toast('削除しました');
+}
+
+// ── Init ──
+load();
+renderResult();
+renderInput();
+</script>
+</body>
+</html>
