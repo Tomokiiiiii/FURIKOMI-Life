@@ -270,6 +270,37 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--tx);
       <div id="item-form" style="display:none;margin-top:10px"></div>
     </div>
 
+    <hr class="divider">
+
+    <div class="sec">
+      <div class="sec-hd">
+        <span class="sec-title">🔄 データ連携</span>
+      </div>
+      <div class="card" style="margin-bottom:8px">
+        <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:12px">
+          PCで設定したデータをスマホに引き継ぐには、PC側でコードをコピーしてスマホ側で貼り付けてください。
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-g" style="width:100%;justify-content:center" onclick="exportData()">
+            📤 このデバイスのデータをコピー
+          </button>
+          <button class="btn btn-g" style="width:100%;justify-content:center" onclick="openImport()">
+            📥 別デバイスのデータを読み込む
+          </button>
+        </div>
+        <div id="import-area" style="display:none;margin-top:12px">
+          <label class="fl">コピーしたコードを貼り付け</label>
+          <textarea id="import-input" class="fi"
+            style="height:100px;resize:none;font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px"
+            placeholder="PC側でコピーしたコードをここに貼り付けてください"></textarea>
+          <div class="fa" style="margin-top:8px">
+            <button class="btn btn-g" onclick="closeImport()">キャンセル</button>
+            <button class="btn btn-p" onclick="importData()">読み込む</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="height:30px"></div>
   </div>
 </div>
@@ -659,6 +690,58 @@ function deleteItem(id) {
   state.items = state.items.filter(i=>i.id!==id);
   save(); renderItemList();
   toast('削除しました');
+}
+
+// ── Export / Import ──
+function exportData() {
+  const code = btoa(encodeURIComponent(JSON.stringify(state)));
+  navigator.clipboard.writeText(code).then(()=>{
+    toast('✅ コードをコピーしました！スマホに貼り付けてください');
+  }).catch(()=>{
+    // フォールバック：テキストエリアで選択
+    const ta = document.createElement('textarea');
+    ta.value = code;
+    ta.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90vw;height:120px;z-index:9999;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;padding:10px;font-size:11px;font-family:monospace';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0,99999);
+    const msg = document.createElement('div');
+    msg.textContent = '上のコードを長押しして全選択→コピーしてください';
+    msg.style.cssText = 'position:fixed;top:calc(50% + 80px);left:50%;transform:translateX(-50%);background:var(--bg3);color:var(--ac);padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;text-align:center;border:1px solid var(--bd2)';
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998';
+    overlay.onclick = ()=>{ document.body.removeChild(ta); document.body.removeChild(msg); document.body.removeChild(overlay); };
+    document.body.appendChild(overlay);
+    document.body.appendChild(msg);
+  });
+}
+
+function openImport() {
+  const area = document.getElementById('import-area');
+  area.style.display = area.style.display==='none' ? '' : 'none';
+  if(area.style.display!=='none') setTimeout(()=>document.getElementById('import-input').focus(),100);
+}
+
+function closeImport() {
+  document.getElementById('import-area').style.display = 'none';
+  document.getElementById('import-input').value = '';
+}
+
+function importData() {
+  const raw = document.getElementById('import-input').value.trim();
+  if(!raw) { toast('コードを貼り付けてください'); return; }
+  try {
+    const parsed = JSON.parse(decodeURIComponent(atob(raw)));
+    if(!parsed.accounts || !parsed.items) throw new Error();
+    if(!confirm(`読み込みますか？\n口座 ${parsed.accounts.length}件・項目 ${parsed.items.length}件\n※現在のデータは上書きされます`)) return;
+    state = parsed;
+    save();
+    closeImport();
+    renderSettings();
+    toast('✅ データを読み込みました！');
+  } catch(e) {
+    toast('❌ コードが正しくありません');
+  }
 }
 
 // ── Init ──
