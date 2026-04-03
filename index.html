@@ -426,7 +426,7 @@ function renderResult() {
   state.items.forEach(item=>{
     if(!byAcc[item.accountId]) return;
     const amt = item.type==='fixed' ? (item.fixedAmount||0) : parseNum(md[item.id]);
-    byAcc[item.accountId].items.push({id:item.id, name:item.name, type:item.type, amt});
+    byAcc[item.accountId].items.push({id:item.id, name:item.name, type:item.type, amt, dueDay:item.dueDay||null});
     byAcc[item.accountId].total += amt;
     grandTotal += amt;
   });
@@ -469,8 +469,9 @@ function renderResult() {
       </div>
       <div class="tc-body">`;
     g.items.forEach(it=>{
+      const dueTag = it.dueDay ? `<span style="font-size:10px;color:var(--tx3);margin-left:2px">📅${it.dueDay}日</span>` : '';
       html += `<div class="ti">
-        <span class="ti-name">${it.name}</span>
+        <span class="ti-name">${it.name}${dueTag}</span>
         <span class="chip ${it.type==='fixed'?'ch-fix':'ch-var'}">${it.type==='fixed'?'固定':'変動'}</span>
         <span class="ti-amt">¥${fmt(it.amt)}</span>
       </div>`;
@@ -595,12 +596,13 @@ function renderItemList() {
   el.innerHTML = state.items.map(it=>{
     const acc = state.accounts.find(a=>a.id===it.accountId);
     const sub = it.type==='fixed' ? `¥${fmt(it.fixedAmount)}（固定）` : '毎月変動';
+    const due = it.dueDay ? `　📅 毎月${it.dueDay}日` : '';
     return `<div class="card">
       <div class="card-row">
         <div class="ic ic-a">${it.emoji||'💳'}</div>
         <div class="ci">
           <div class="ci-name">${it.name}</div>
-          <div class="ci-sub">${acc?`${acc.emoji} ${acc.name}`:'—'} ／ ${sub}</div>
+          <div class="ci-sub">${acc?`${acc.emoji} ${acc.name}`:'—'} ／ ${sub}${due}</div>
         </div>
         <button class="bic" onclick="openItemForm('${it.id}')">✏️</button>
         <button class="bic btn-d" onclick="deleteItem('${it.id}')">🗑</button>
@@ -698,6 +700,16 @@ function openItemForm(id=null) {
       <div class="fs-w"><select class="fs" id="it-acc">${accOpts||'<option value="">先に口座を追加してください</option>'}</select></div>
     </div>
     <div class="fr">
+      <label class="fl">引落日（毎月何日？）</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input class="fi" id="it-due" type="number" inputmode="numeric" min="1" max="31"
+          placeholder="例：27" value="${it&&it.dueDay?it.dueDay:''}"
+          style="width:100px;flex-shrink:0">
+        <span style="font-size:13px;color:var(--tx2)">日</span>
+        <span style="font-size:11px;color:var(--tx3)">（任意）</span>
+      </div>
+    </div>
+    <div class="fr">
       <label class="fl">金額タイプ</label>
       <div class="type-row" id="type-row">
         <div class="type-btn${!isFixed?' sel':''}" onclick="setType('variable')">変動（毎月入力）</div>
@@ -737,13 +749,15 @@ function saveItem() {
   const accId = document.getElementById('it-acc').value;
   const isFixed = document.querySelector('.type-btn.sel').textContent.includes('固定');
   const fixedAmount = parseNum(document.getElementById('it-fixed')?.value||'0');
+  const dueDayRaw = parseInt(document.getElementById('it-due')?.value||'0');
+  const dueDay = dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : null;
   if(!name) { toast('項目名を入力してください'); return; }
   if(!accId) { toast('口座を選択してください'); return; }
   if(editingItemId) {
     const it = state.items.find(i=>i.id===editingItemId);
-    Object.assign(it, {name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji});
+    Object.assign(it, {name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji, dueDay});
   } else {
-    state.items.push({id:uid(), name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji});
+    state.items.push({id:uid(), name, accountId:accId, type:isFixed?'fixed':'variable', fixedAmount, emoji:selectedItemEmoji, dueDay});
   }
   save(); closeItemForm();
   toast(editingItemId ? '更新しました' : '項目を追加しました');
